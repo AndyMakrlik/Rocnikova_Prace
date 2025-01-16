@@ -7,7 +7,7 @@ export default function Home() {
         <>
             <div className="container text-center">
                 <div className="row">
-                    <div className="col col-lg-4 col-xl-4">
+                    <div className="col-12 col-lg-4 col-xl-4 order-2">
                         <form>
                             <h4 className="fw-bold">Vyhledávání</h4>
                             <hr className="mb-4" />
@@ -93,12 +93,10 @@ export default function Home() {
                             </div>
                         </form>
                     </div>
-                    <div className="col-lg-8 col-xl-8 d-none d-lg-block">
+                    <div className="col-12 col-lg-8 col-xl-8 order-1 order-lg-2">
                         <h4 className="fw-bold">Jsme největší autoinzerce sportovních aut v České Republice</h4>
-                        <h6 className="fw-bold">Pro vložení inzerátů se zaregistrujte, popřípadě založte účet</h6>
-                        <div className="d-flex align-items-center justify-content-center" style={{ height: '100%' }}>
-                            <img className="img-fluid" src={bg} alt="auto" style={{ maxWidth: '100%' }} />
-                        </div>
+                        <h6 className="fw-bold" style={{marginBottom: '150px'}}>Pro vložení inzerátů se zaregistrujte, popřípadě založte účet</h6>
+                        <img className="img-fluid" src={bg} alt="auto" style={{ maxHeight: '100%', marginBottom: '150px' }} />
                     </div>
                 </div>
             </div>

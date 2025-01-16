@@ -4,12 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import CarAddFav from '../components/CarAddFav.js'
+import CheckAuth from '../functions/checkAuthUnLogged';
 import { useState } from 'react';
 
 export default function Favourites() {
   const navigate = useNavigate();
   const [cars, setCars] = useState([]);
   const [favourites, setFavourites] = useState([]);
+
+  useEffect(() => {
+    CheckAuth(navigate);
+  });
 
   useEffect(() => {
     axios.get('http://localhost:3001/favor', { withCredentials: true })

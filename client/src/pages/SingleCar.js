@@ -21,6 +21,7 @@ export default function SingleCar() {
   const handleGoBack = () => {
     navigate(-1);
   };
+  
 
   useEffect(() => {
     axios.get(`http://localhost:3001/car/${id}`)
@@ -28,7 +29,6 @@ export default function SingleCar() {
         if (res.data.Status === "Success") {
           setCarData(res.data.result);
           setImages(res.data.result.obrazky);
-          console.log(res.data.result);
         } else {
           toast.error(res.data.Error)
         }
@@ -74,7 +74,7 @@ export default function SingleCar() {
             <img
               src={images[0]}
               alt="Car"
-              style={{ width: '100%', cursor: 'pointer' }}
+              style={{ width: '75%', cursor: 'pointer' }}
               onClick={() => handleImageClick(0)}
             />
           </div>

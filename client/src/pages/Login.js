@@ -6,11 +6,12 @@ import { useEffect } from 'react';
 import CheckAuth from '../functions/checkAuthLogged';
 
 export default function Login() {
-  const navigate = useNavigate();
+
   
+  const navigate = useNavigate();
   useEffect(() => {
     CheckAuth(navigate);
-  })
+  });
 
   const [values, setValues] = useState({
     email: '',
@@ -37,6 +38,7 @@ export default function Login() {
         .then(res => {
           if (res.data.Status === "Success") {
             toast.success("Úspěšně jste se přihlásil.")
+            localStorage.setItem('isLoggedIn', 'true');
             navigate('/');
           } else {
             toast.error(res.data.Error);

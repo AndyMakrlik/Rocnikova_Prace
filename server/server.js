@@ -5,6 +5,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import cookie from 'cookie-parser';
 import nodeMailer from 'nodemailer';
+import session from 'express-session';
+import path from 'path';
+import { fileURLToPath } from "url";
 
 const app = express();
 const port = 3001;
@@ -14,6 +17,26 @@ app.use(cors({
     methods: ['POST', 'GET', 'DELETE'],
     credentials: true
 }));
+
+
+app.use(session({
+    secret: 'secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        httpOnly: false,
+        sameSite: 'strict'
+    }
+}))
+
+app.use((req, res, next) => {
+    res.locals.session = req.session.user;
+    next();
+})
+
+app.use("/uploads", express.static(path.join('./uploads')));
+
 
 app.use(cookie());
 
@@ -34,42 +57,20 @@ db.connect((err) => {
     console.log('Připojeno k databázi');
 });
 
-//Kontrola přihlášení s id
-const verifyUser = (req, res, next) => {
-    const token = req.cookies.token;
-    if (!token) {
-        return res.json({ Error: "Nejsi přihlášen!" })
-    } else {
-        jwt.verify(token, "tajnyKlic", (err, decoded) => {
-            if (err) {
-                return res.json({ Error: "Token není správný!" })
-            } else {
-                req.id = decoded.id;
-                next();
-            }
-        })
-    }
-}
-
 //Kontrola přihlášení
-const verifyUserLogged = (req, res, next) => {
-    const token = req.cookies.token;
-    if (!token) {
-        return res.json({ Error: "Nejsi přihlášen!" })
+const verifyUser = (req, res, next) => {
+    const user = req.session.user;
+    
+    if (!user || !user.id) {
+        return res.json({ Error: "Nejsi přihlášen!" });
     } else {
-        jwt.verify(token, "tajnyKlic", (err) => {
-            if (err) {
-                return res.json({ Error: "Token není správný!" })
-            } else {
-                req.id = decoded.id;
-                next();
-            }
-        })
+        req.id = user.id;
+        next();
     }
 }
 
 //Požadavek na kontrolu přihlášení
-app.get('/check', verifyUserLogged, (req, res) => {
+app.get('/check', verifyUser, (req, res) => {
     return res.json({ Status: 'Success' })
 });
 
@@ -187,13 +188,7 @@ app.get('/favourites', verifyUser, async (req, res) => {
             return;
         }
 
-        const carsWithBase64 = cars.map(car => {
-            if (car.obrazek) {
-                car.obrazek = `data:image/png;base64,${car.obrazek.toString('base64')}`;
-            }
-            return car;
-        });
-        return res.json({ Status: "Success", cars: carsWithBase64 });
+        return res.json({ Status: "Success", cars });
     } catch (err) {
         return res.json({ Error: "Nastala chyba při zpracování oblíbených aut." });
     }
@@ -217,13 +212,7 @@ app.post('/prihlaseni', async (req, res) => {
             return res.json({ Error: "Hesla se neshodují" });
         }
 
-        const token = jwt.sign({ id: user.id }, "tajnyKlic", { expiresIn: '1d' });
-
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 24 * 60 * 60 * 1000
-        });
+        req.session.user = {id: user.id}
 
         return res.json({ Status: 'Success' });
     } catch (err) {
@@ -359,7 +348,7 @@ app.get('/car/:id', async (req, res) => {
             uzivatel.mesto, 
             uzivatel.telefon, 
             uzivatel.email, 
-            GROUP_CONCAT(TO_BASE64(obrazky.obrazek) SEPARATOR ',') AS obrazky
+            GROUP_CONCAT(obrazky.obrazek SEPARATOR ',') AS obrazky
         FROM 
             inzerat 
         JOIN 
@@ -384,7 +373,7 @@ app.get('/car/:id', async (req, res) => {
         if (result.length > 0) {
             const car = result[0];
             if (car.obrazky) {
-                car.obrazky = car.obrazky.split(',').map(img => `data:image/png;base64,${img}`);
+                car.obrazky = car.obrazky.split(',').map(img => img);
             }
             return res.json({ result: car, Status: "Success" });
         } else {
@@ -462,13 +451,8 @@ app.get('/cars', async (req, res) => {
 
     try {
         const [cars] = await db.promise().query(sql);
-        const carsWithBase64 = cars.map(car => {
-            if (car.obrazek) {
-                car.obrazek = `data:image/png;base64,${car.obrazek.toString('base64')}`;
-            }
-            return car;
-        });
-        return res.json({ Status: "Success", cars: carsWithBase64 });
+
+        return res.json({ Status: "Success", cars });
     } catch (error) {
         console.error(error);
         return res.json({ Error: 'Chyba při načítání inzerátů.'});
@@ -476,9 +460,15 @@ app.get('/cars', async (req, res) => {
 })
 
 //Odhlášení
-app.post('/odhlasit', (req, res) => {
-    res.clearCookie('token', { httpOnly: true, secure: true, maxAge: 0});
-    return res.json({ Status: "Success" });
+app.get('/odhlasit', (req, res) => {
+    if(req.session) {
+        req.session.destroy((err) => {
+            if (err) {
+                return res.json({ Error: "Nepodařilo se odhlásit." })
+            }
+            return res.json({Status: 'Success'});
+        })
+    }
 });
 
 //Port

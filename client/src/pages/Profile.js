@@ -24,9 +24,6 @@ export default function Profile() {
     } else {
       setIsSamePhone(false);
     }
-
-    console.log(data);
-    console.log(editData);
   }, [editData, data]);
 
   const handleSave = (e) => {
@@ -83,14 +80,13 @@ export default function Profile() {
           setData(res.data);
           setEditData(res.data);
         } else {
-          toast.error(res.data.Error)
           navigate('/Login');
         }
       })
       .catch(error => {
         toast.error("Došlo k chybě při náčítání stránky profilu. " + error);
       });
-  }, [])
+  }, [navigate])
 
 
   const renderInputField = (label, name, value) => (

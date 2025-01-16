@@ -41,7 +41,7 @@ const Footer = () => {
                                 </a>
                             </p>
                             <p>
-                                <a href="https://www.facebook.com/SportovniAuta" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <a href="https://www.facebook.com/people/Sportovn%C3%AD-Auta/pfbid05ZM78vu5eowdhDgc8NADxbNSCqqAWEod9dMtzb7rKHJYc6ifvCAnVstZNZT9iPGel/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" fill="#4267B2" className="bi bi-facebook me-2" viewBox="0 0 16 16">
                                         <path d="M16 8a8 8 0 1 0-9.464 7.93V10.4H5.5V8h1.036V6.293C6.536 4.26 7.79 3.5 9.298 3.5c1.1 0 1.92.082 2.181.12v2.548h-1.5c-1.197 0-1.429.56-1.429 1.376V8h2.863l-.335 2.4H9.5v5.53A8 8 0 0 0 16 8z" />
                                     </svg>

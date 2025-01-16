@@ -59,7 +59,7 @@ const handleHeartClick = async (e) => {
         <div className='col-12 col-xl-3 col-lg-3 col-sm-12'>
           <img alt='auto' className='img-fluid' src={car.obrazek}/>
         </div>
-        <div className="col-4 col-xl-3 col-lg-3 col-sm-8 d-flex justify-content-center">
+        <div className="col-7 col-xl-3 col-lg-3 col-sm-8 d-flex justify-content-center">
           <div className="card" style={{ border: 'none', width: '100%' }}>
             <div className="card-body" style={{ textAlign: 'left' }}>
               <h5 className="card-title fw-bold mb-3">{car.nazev}</h5>
@@ -70,7 +70,7 @@ const handleHeartClick = async (e) => {
             </div>
           </div>
         </div>
-        <div className='col-2 col-xl-2 col-lg-2 col-sm-4 d-flex justify-content-center'>
+        <div className='col-5 col-xl-2 col-lg-2 col-sm-4 d-flex justify-content-center'>
           <div className="card" style={{ border: 'none', width: '100%' }}>
             <div className="card-body" style={{ textAlign: 'right' }}>
               <h4 className="card-title fw-bold" style={{ color: car.stav === 'Aktivní' ? 'green' : car.stav === 'Rezervovaný' ? 'orange' : car.stav === 'Zrušený' ? 'red' : 'black' }}>{car.stav}</h4>
@@ -81,7 +81,7 @@ const handleHeartClick = async (e) => {
             </div>
           </div>
         </div>
-        <div className='col-4 col-xl-4 col-lg-4 col-sm-12'>
+        <div className='col-12 col-xl-4 col-lg-4 col-sm-12'>
           <h5 className='mb-5'><span className='fw-bold'>Cena při uložení:</span> {Number(car.cenaPriUlozeni).toLocaleString('cs-CZ')} Kč</h5>
           <h5><span className='fw-bold'>Datum přidání:</span> {formatDate(car.datum_pridani)}</h5>
         </div>

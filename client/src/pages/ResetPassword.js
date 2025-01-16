@@ -2,11 +2,18 @@ import React from 'react'
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useEffect } from 'react';
+import CheckAuth from '../functions/checkAuthLogged';
 import axios from 'axios';
 
 function ResetPassword() {
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+      CheckAuth(navigate);
+    });
+  
 
   const [email, setEmail] = useState();
 

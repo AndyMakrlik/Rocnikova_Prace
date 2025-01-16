@@ -9,8 +9,8 @@ export default function Notifications() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    CheckAuth(navigate);
-  });
+      CheckAuth(navigate);
+    });
   return (
     <>
         <Navbar />

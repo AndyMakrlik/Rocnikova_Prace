@@ -11,7 +11,7 @@ const Navbar = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        axios.get('http://localhost:3001/profile', { withCredentials: true })
+        axios.get('http://localhost:3001/check', { withCredentials: true })
             .then(res => {
                 if (res.data.Status === "Success") {
                     jePrihlasen(true);
@@ -22,7 +22,7 @@ const Navbar = () => {
     })
 
     const odhlasit = () => {
-        axios.post('http://localhost:3001/odhlasit', { withCredentials: true })
+        axios.get('http://localhost:3001/odhlasit', { withCredentials: true })
             .then(res => {
                 if (res.data.Status === "Success") {
                     jePrihlasen(false);
