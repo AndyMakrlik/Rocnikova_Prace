@@ -17,7 +17,7 @@ function RestorePassword() {
 
     const [heslo, setPassword] = useState();
 
-    const { id, token } = useParams();
+    const { token } = useParams();
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -27,7 +27,7 @@ function RestorePassword() {
         if (!hesloRegex.test(heslo)) {
             toast.error('Heslo nesmí obsahovat mezery, musí mít alespoň 8 znaků, obsahovat malé a velké písmeno, číslici a speciální znak (@, #, &).');
         } else {
-            axios.post(`http://localhost:3001/restorePassword/${id}/${token}`, { heslo }, { withCredentials: true })
+            axios.post(`http://localhost:3001/restorePassword/${token}`, { heslo }, { withCredentials: true })
                 .then(res => {
                     if (res.data.Status === 'Success') {
                         toast.success("Heslo bylo úspěšně změněno.")

@@ -34,7 +34,7 @@ function App() {
         <Route path='/profile' element={<Profile />} />
         <Route path='/favourites' element={<Favourites />}/>
         <Route path='/resetPassword' element={<ResetPassword />} />
-        <Route path='/restorePassword/:id/:token' element={<RestorePassword/>}/>
+        <Route path='/restorePassword/:token' element={<RestorePassword/>}/>
         <Route path='/car/:id' element={<SingleCar/>}/>
       </Routes>
       <Footer />

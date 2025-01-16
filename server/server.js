@@ -7,10 +7,10 @@ import cookie from 'cookie-parser';
 import nodeMailer from 'nodemailer';
 import session from 'express-session';
 import path from 'path';
-import { fileURLToPath } from "url";
 
 const app = express();
 const port = 3001;
+
 app.use(express.json());
 app.use(cors({
     origin: ['http://localhost:3000'],
@@ -60,7 +60,7 @@ db.connect((err) => {
 //Kontrola přihlášení
 const verifyUser = (req, res, next) => {
     const user = req.session.user;
-    
+
     if (!user || !user.id) {
         return res.json({ Error: "Nejsi přihlášen!" });
     } else {
@@ -112,19 +112,21 @@ app.post('/registrace', async (req, res) => {
     }
 });
 
+// Přidání inzerátu do oblíbených
 app.post('/favor', verifyUser, async (req, res) => {
     const id = req.id;
     const { carId, cena } = req.body;
     const sql = 'INSERT INTO oblibene (`fk_uzivatel`, `fk_inzerat`, `cenaPriUlozeni`) VALUES (?, ?, ?)';
-    try{
+    try {
         await db.promise().query(sql, [id, carId, cena]);
         res.json({ Status: 'Success' });
     }
-    catch (err){
-        res.json({Error: 'Nastala chyba při přidání auta do oblíbených.'})
+    catch (err) {
+        res.json({ Error: 'Nastala chyba při přidání auta do oblíbených.' })
     }
 })
 
+//odebrání inzerátu z oblíbených
 app.delete('/favor/:carId', verifyUser, async (req, res) => {
     const id = req.id;
     const { carId } = req.params;
@@ -137,6 +139,7 @@ app.delete('/favor/:carId', verifyUser, async (req, res) => {
     }
 });
 
+//Získání oblíbených inzerátů (Kvůli zobrazení srdce když uživatel hledá vozidla)
 app.get('/favor', verifyUser, async (req, res) => {
     const id = req.id;
     const sql = 'SELECT fk_inzerat FROM oblibene WHERE fk_uzivatel = ?';
@@ -149,6 +152,7 @@ app.get('/favor', verifyUser, async (req, res) => {
     }
 });
 
+//Získání oblíbených inzerátů (Pro zobrazení na stránce oblíbených)
 app.get('/favourites', verifyUser, async (req, res) => {
     const id = req.id;
     const sql = `
@@ -184,7 +188,7 @@ app.get('/favourites', verifyUser, async (req, res) => {
     try {
         const [cars] = await db.promise().query(sql, [id]);
 
-        if(cars.length === 0) {
+        if (cars.length === 0) {
             return;
         }
 
@@ -212,7 +216,7 @@ app.post('/prihlaseni', async (req, res) => {
             return res.json({ Error: "Hesla se neshodují" });
         }
 
-        req.session.user = {id: user.id}
+        req.session.user = { id: user.id }
 
         return res.json({ Status: 'Success' });
     } catch (err) {
@@ -251,7 +255,7 @@ app.post('/resetPassword', async (req, res) => {
             from: 'sportovniautainfo@gmail.com',
             to: req.body.email,
             subject: 'Resetování hesla',
-            text: `Odkaz je platný po dobu 10 minut: http://localhost:3000/restorePassword/${user.id}/${token}`
+            text: `Odkaz je platný po dobu 10 minut: http://localhost:3000/restorePassword/${token}`
         };
 
         await transporter.sendMail(mailOptions);
@@ -263,20 +267,23 @@ app.post('/resetPassword', async (req, res) => {
 })
 
 //Požadavek na obnovení hesla
-app.post('/restorePassword/:id/:token', async (req, res) => {
-    const { id, token } = req.params;
+app.post('/restorePassword/:token', async (req, res) => {
+    const { token } = req.params;
     const { heslo } = req.body;
 
     try {
         const decoded = jwt.verify(token, "tajnyKlic");
+        
         if (!decoded) {
             return res.json({ Error: "Neplatný nebo vypršený token." });
         }
 
+        const userId = decoded.id;
+
         const hash = await bcrypt.hash(heslo, 10);
 
         const sqlChange = 'UPDATE uzivatel SET heslo = ? WHERE id = ?';
-        const [result] = await db.promise().query(sqlChange, [hash, id]);
+        const [result] = await db.promise().query(sqlChange, [hash, userId]);
 
         if (result.affectedRows > 0) {
             res.clearCookie('reset');
@@ -365,11 +372,11 @@ app.get('/car/:id', async (req, res) => {
             inzerat.id = ?
         GROUP BY 
             inzerat.id`
-            ;
+        ;
 
     try {
         const [result] = await db.promise().query(sql, [id]);
-        
+
         if (result.length > 0) {
             const car = result[0];
             if (car.obrazky) {
@@ -380,7 +387,7 @@ app.get('/car/:id', async (req, res) => {
             return res.json({ Error: 'Auto neexistuje' });
         }
     } catch (error) {
-        return res.json({ Error: 'Chyba při načítání auta.'});
+        return res.json({ Error: 'Chyba při načítání auta.' });
     }
 });
 
@@ -401,8 +408,6 @@ app.post('/profile', verifyUser, async (req, res) => {
                 return res.json({ Error: "Tento e-mail je již zaregistrován" });
             }
         }
-
-
 
         const sql = `UPDATE uzivatel SET jmeno = ?, prijmeni = ?, email = ?, telefon = ?, kraj = ?, mesto = ? WHERE id = ?`;
         const values = [
@@ -455,18 +460,18 @@ app.get('/cars', async (req, res) => {
         return res.json({ Status: "Success", cars });
     } catch (error) {
         console.error(error);
-        return res.json({ Error: 'Chyba při načítání inzerátů.'});
+        return res.json({ Error: 'Chyba při načítání inzerátů.' });
     }
 })
 
 //Odhlášení
 app.get('/odhlasit', (req, res) => {
-    if(req.session) {
+    if (req.session) {
         req.session.destroy((err) => {
             if (err) {
                 return res.json({ Error: "Nepodařilo se odhlásit." })
             }
-            return res.json({Status: 'Success'});
+            return res.json({ Status: 'Success' });
         })
     }
 });

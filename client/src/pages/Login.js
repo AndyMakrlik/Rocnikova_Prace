@@ -38,7 +38,6 @@ export default function Login() {
         .then(res => {
           if (res.data.Status === "Success") {
             toast.success("Úspěšně jste se přihlásil.")
-            localStorage.setItem('isLoggedIn', 'true');
             navigate('/');
           } else {
             toast.error(res.data.Error);
