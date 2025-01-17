@@ -10,7 +10,7 @@ import { useState } from 'react';
 export default function Favourites() {
   const navigate = useNavigate();
   const [cars, setCars] = useState([]);
-  const [favourites, setFavourites] = useState([]);
+  const [favourites, setFavourites] = useState([null]);
 
   useEffect(() => {
     CheckAuth(navigate);
@@ -21,26 +21,26 @@ export default function Favourites() {
       .then(res => {
         if(res.data.Status === 'Success') {
           setFavourites(res.data.favourites.map(fav => fav.fk_inzerat))
-        } else {
-          toast.error(res.data.Error)
         }
       })
       .catch(error => {
         toast.error('Došlo k chybě při načítání inzerátů. ' + error)
       })
+  })
 
-    axios.get('http://localhost:3001/favourites', { withCredentials: true })
+  useEffect(() => {
+    if(favourites !== null){
+      axios.get('http://localhost:3001/favourites', { withCredentials: true })
       .then(res => {
         if (res.data.Status === "Success") {
           setCars(res.data.cars)
-        } else {
-          toast.error(res.data.Error)
         }
       })
       .catch(error => {
         toast.error("Došlo k chybě při náčítání stránky profilu. " + error);
       });
-  }, [])
+    }
+  }, [favourites])
 
   
   

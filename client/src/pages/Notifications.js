@@ -13,8 +13,7 @@ export default function Notifications() {
     });
   return (
     <>
-        <Navbar />
-        <Footer />
+
     </>
   )
 }

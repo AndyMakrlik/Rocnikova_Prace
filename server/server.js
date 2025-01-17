@@ -62,7 +62,7 @@ const verifyUser = (req, res, next) => {
     const user = req.session.user;
 
     if (!user || !user.id) {
-        return res.json({ Error: "Nejsi přihlášen!" });
+        return res.json({Error: "Nejsi přihlášen"});
     } else {
         req.id = user.id;
         next();
@@ -149,6 +149,26 @@ app.get('/favor', verifyUser, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.json({ Error: 'Nepodařilo se načíst oblíbená auta.' });
+    }
+});
+
+//Získaní oblíbených inzerátů (Kvůli zobrazení srdce na samostatném inzerátu)
+app.get('/singleFavourite/:carId', verifyUser, async (req, res) => {
+    const id = req.id; // ID uživatele z middleware verifyUser
+    const { carId } = req.params; // ID inzerátu z URL
+    const sql = 'SELECT 1 FROM oblibene WHERE fk_uzivatel = ? AND fk_inzerat = ? LIMIT 1';
+
+    try {
+        const [rows] = await db.promise().query(sql, [id, carId]);
+
+        if (rows.length > 0) {
+            return res.json({ Status: "Success" });
+        } else {
+            return res.json({ Status: "Not Found" });
+        }
+    } catch (err) {
+        console.error("Chyba při kontrole oblíbeného inzerátu:", err);
+        res.json({ Error: 'Nastala chyba při kontrole oblíbeného inzerátu.' });
     }
 });
 

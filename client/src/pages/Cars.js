@@ -15,8 +15,6 @@ export default function Cars() {
       .then(res => {
         if(res.data.Status === 'Success') {
           setFavourites(res.data.favourites.map(fav => fav.fk_inzerat))
-        } else {
-          
         }
       })
       .catch(error => {
@@ -34,7 +32,7 @@ export default function Cars() {
       .catch(error => {
         toast.error("Došlo k chybě při náčítání inzerátů. " + error);
       });
-  }, [])
+  })
 
   return (
     <>

@@ -16,12 +16,37 @@ export default function SingleCar() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [images, setImages] = useState([]);
+  const [isFavourite, setIsFavourite] = useState(false);
+  const [auth, jePrihlasen] = useState(false);
 
   const navigate = useNavigate();
   const handleGoBack = () => {
     navigate(-1);
   };
-  
+
+  const handleHeartClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!auth) {
+      toast.error("Musíte se nejdříve přihlásit.");
+      return;
+    }
+
+    try {
+      if (!isFavourite) {
+        await axios.post('http://localhost:3001/favor', { carId: carData.id, cena: carData.cena }, { withCredentials: true });
+        toast.success(`${carData.inzerat_nazev} byl přidán do oblíbených.`);
+      } else {
+        await axios.delete(`http://localhost:3001/favor/${carData.id}`, { withCredentials: true });
+        toast.success(`${carData.inzerat_nazev} byl odebrán z oblíbených.`);
+      }
+      setIsFavourite(!isFavourite);
+    } catch (err) {
+      console.error("Error updating favourites:", err);
+    }
+  };
+
 
   useEffect(() => {
     axios.get(`http://localhost:3001/car/${id}`)
@@ -37,6 +62,33 @@ export default function SingleCar() {
         toast.error("Došlo k chybě při náčítání inzerátu.");
       });
   }, [id]);
+
+  useEffect(() => {
+    if (carData) {
+      axios.get('http://localhost:3001/profile', { withCredentials: true })
+        .then(res => {
+          if (res.data.Status === "Success") {
+            jePrihlasen(true);
+            axios.get(`http://localhost:3001/singleFavourite/${carData.id}`, { withCredentials: true })
+              .then(res => {
+                if (res.data.Status === "Success") {
+                  setIsFavourite(true);
+                } else {
+                  setIsFavourite(false);
+                }
+              })
+              .catch(err => {
+                console.error("Chyba při kontrole oblíbeného inzerátu:", err);
+              });
+          } else {
+            jePrihlasen(false);
+          }
+        })
+        .catch(err => {
+          console.error("Chyba při ověřování profilu:", err);
+        });
+    }
+  }, [carData]);
 
   const renderSpecification = (name, data, color) => (
     <div className='col-11 col-xxl-11 col-xl-11 col-lg-11 col-md-11 col-sm-11 d-flex justify-content-between align-items-center' style={{ backgroundColor: color, height: '40px' }}>
@@ -64,9 +116,16 @@ export default function SingleCar() {
           </div>
         </div>
         <div className='row' style={{ marginBottom: '30px' }}>
-          <div className='col col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12 d-flex justify-content-between align-items-center'>
-            <h2>{carData.inzerat_nazev}<span style={{ color: carData.stav === 'Aktivní' ? 'green' : carData.stav === 'Rezervovaný' ? 'orange' : carData.stav === 'Zrušený' ? 'red' : 'black' }}> - {carData.stav}</span></h2>
-            <h2>{Number(carData.cena).toLocaleString('cs-CZ')} Kč</h2>
+          <div className='col-6 col-xxl-7 col-xl-7 col-lg-7 col-md-7 col-sm-7' style={{ textAlign: "left" }}>
+            <h2 style={{
+              fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', // Dynamická velikost mezi 1rem a 2rem
+            }}>{carData.inzerat_nazev}<span style={{ color: carData.stav === 'Aktivní' ? 'green' : carData.stav === 'Rezervovaný' ? 'orange' : carData.stav === 'Zrušený' ? 'red' : 'black' }}> - {carData.stav}</span></h2>
+          </div>
+          <div className='col-6 col-xxl-5 col-xl-5 col-lg-5 col-md-5 col-sm-5 d-flex align-items-center justify-content-end gap-3' style={{ textAlign: "right" }}>
+            <h2 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', }}>{Number(carData.cena).toLocaleString('cs-CZ')} Kč</h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fillRule="currentColor" className="bi bi-heart" viewBox="0 0 16 16" fill={isFavourite ? "red" : "currentColor"} onClick={handleHeartClick} style={{ cursor: 'pointer' }}>
+              <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15" />
+            </svg>
           </div>
         </div>
         <div className='row' style={{ marginBottom: '30px' }}>
