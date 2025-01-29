@@ -64,6 +64,10 @@ export default function Profile() {
     }
   };
 
+  const handleChange = (e) => {
+    setEditData({ ...editData, [e.target.name]: e.target.value });
+  };
+
   const handleCancel = () => {
     setEditData(data);
     setIsEditing(false);
@@ -82,7 +86,7 @@ export default function Profile() {
       .catch(error => {
         toast.error("Došlo k chybě při náčítání stránky profilu. " + error);
       });
-  })
+  }, [])
 
 
   const renderInputField = (label, name, value) => (
@@ -96,7 +100,7 @@ export default function Profile() {
           className="form-control"
           disabled={!isEditing}
           value={isEditing ? editData[name] || "" : value || ""}
-          onChange={(e) => {setEditData({ ...editData, [e.target.name]: e.target.value })}}
+          onChange={handleChange}
         />
       </div>
     </div>
@@ -137,7 +141,7 @@ export default function Profile() {
                     className="form-select"
                     value={isEditing ? editData.kraj || "" : data.kraj || ""}
                     disabled={!isEditing}
-                    onChange={(e) => {setEditData({ ...editData, [e.target.name]: e.target.value })}}
+                    onChange={handleChange}
                   >
                     <option value='' disabled>Vyberte kraj</option>
                     <option value="Praha">Hlavní město Praha</option>

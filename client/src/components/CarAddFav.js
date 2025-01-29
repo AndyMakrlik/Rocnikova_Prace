@@ -3,22 +3,22 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { useEffect } from 'react'; 
+import { useEffect } from 'react';
 
 const CarAddFav = ({ car, isFavourite: stateFavourite }) => {
   const [auth, jePrihlasen] = useState(false);
   const [isFavourite, setIsFavourite] = useState(stateFavourite);
-
+  
   useEffect(() => {
-    axios.get('http://localhost:3001/profile', { withCredentials: true })
-        .then(res => {
-            if (res.data.Status === "Success") {
-                jePrihlasen(true);
-            } else {
-                jePrihlasen(false);
-            }
-        })
-})
+    axios.get('http://localhost:3001/check', { withCredentials: true })
+      .then(res => {
+        if (res.data.Status === "Success") {
+          jePrihlasen(true);
+        } else {
+          jePrihlasen(false);
+        }
+      })
+  }, []);
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);

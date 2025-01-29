@@ -11,10 +11,7 @@ export default function Favourites() {
   const navigate = useNavigate();
   const [cars, setCars] = useState([]);
   const [favourites, setFavourites] = useState([null]);
-
-  useEffect(() => {
-    CheckAuth(navigate);
-  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios.get('http://localhost:3001/favor', { withCredentials: true })
@@ -26,7 +23,7 @@ export default function Favourites() {
       .catch(error => {
         toast.error('Došlo k chybě při načítání inzerátů. ' + error)
       })
-  })
+  }, [])
 
   useEffect(() => {
     if(favourites !== null){
@@ -42,8 +39,15 @@ export default function Favourites() {
     }
   }, [favourites])
 
-  
-  
+  useEffect(() => {
+    CheckAuth(navigate).then(() => {
+        setLoading(false);
+    });
+}, [navigate]);
+
+if (loading) {
+  return <></>;
+}
   return (
     <>
     <div className='container text-center'>

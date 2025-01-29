@@ -8,9 +8,6 @@ import { useNavigate } from 'react-router-dom';
 export default function Notifications() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-      CheckAuth(navigate);
-    });
   return (
     <>
 

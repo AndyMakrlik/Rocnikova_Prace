@@ -11,7 +11,6 @@ export default function Registration() {
   useEffect(() => {
     CheckAuth(navigate);
   });
-  
 
   const [values, setValues] = useState({
     jmeno: '',

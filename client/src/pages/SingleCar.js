@@ -112,7 +112,7 @@ export default function SingleCar() {
       <div className='container'>
         <div className='row'>
           <div className='col col-xxl-12 col-xl-12 col-lg-12 col-md-12 col-sm-12'>
-            <h6 onClick={handleGoBack} style={{ cursor: 'pointer' }}>&lt; Zpět na výpis</h6>
+            <h6 onClick={handleGoBack} style={{ cursor: 'pointer' }}>&lt; Zpět</h6>
           </div>
         </div>
         <div className='row' style={{ marginBottom: '30px' }}>

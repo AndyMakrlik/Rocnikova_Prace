@@ -6,17 +6,33 @@ import bcrypt from 'bcrypt';
 import cookie from 'cookie-parser';
 import nodeMailer from 'nodemailer';
 import session from 'express-session';
+import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
+import axios from 'axios';
 
 const app = express();
 const port = 3001;
 
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const fileExtension = file.mimetype.split('/')[1];
+        const uniqueName = `${Date.now()}-${Math.random().toString(36)}.${fileExtension}`;
+        cb(null, uniqueName);
+    }
+});
+
+const upload = multer({ storage: storage })
+
 app.use(express.json());
 app.use(cors({
-    origin: ['http://localhost:3000'],
-    methods: ['POST', 'GET', 'DELETE'],
-    credentials: true
+
 }));
+
+
 
 
 app.use(session({
@@ -40,13 +56,12 @@ app.use("/uploads", express.static(path.join('./uploads')));
 
 app.use(cookie());
 
-//Připojení databáze
-const db = mysql2.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "autobazar"
-})
+const db = await mysql2.createConnection({
+    host: 'localhost', // Nastavte hostitele
+    user: 'root',      // Nastavte uživatele
+    password: '', // Nastavte heslo
+    database: 'autobazar' // Nastavte název databáze
+});
 
 //Kontrola připojení k databázi
 db.connect((err) => {
@@ -61,18 +76,198 @@ db.connect((err) => {
 const verifyUser = (req, res, next) => {
     const user = req.session.user;
 
+    if (!user || !user.role) {
+        return res.json({});
+    }
+
     if (!user || !user.id) {
-        return res.json({Error: "Nejsi přihlášen"});
+        return res.json({});
     } else {
         req.id = user.id;
+        req.role = user.role;
         next();
     }
 }
 
 //Požadavek na kontrolu přihlášení
 app.get('/check', verifyUser, (req, res) => {
-    return res.json({ Status: 'Success' })
+    return res.json({ Status: 'Success', role: req.role })
 });
+
+app.delete('/user/:id', async (req, res) => {
+    const userId = req.params.id;
+    try {
+        await db.promise().query('DELETE FROM oblibene WHERE fk_uzivatel = ?', [userId]);
+
+        const ads = await db.promise().query('SELECT id, fk_auto FROM inzerat WHERE fk_uzivatel = ?', [userId]);
+
+        if (ads[0].length > 0) {
+            for (const ad of ads[0]) {
+                const adId = ad.id;
+                const carId = ad.fk_auto;
+
+                await db.promise().query('DELETE FROM oblibene WHERE fk_inzerat = ?', [adId]);
+
+                const images = await db.promise().query('SELECT obrazek FROM obrazky WHERE fk_inzerat = ?', [adId]);
+
+                // Získání a smazání obrázků
+                if (images.length > 0) {
+                    images[0].forEach(image => {
+                        const imagePath = path.join(__dirname, image.obrazek.replace('http://localhost:3001/', ''));
+                        if (imagePath) {
+                            fs.unlinkSync(imagePath)
+                        } else {
+                            console.log("Cesta k obrázku je undefined nebo prázdná");
+                        }
+                    });
+                }
+                await db.promise().query('DELETE FROM obrazky WHERE fk_inzerat = ?', [adId]);
+
+                // Smazání inzerátu
+                await db.promise().query('DELETE FROM inzerat WHERE id = ?', [adId]);
+
+                // Smazání auta
+                await db.promise().query('DELETE FROM auto WHERE id = ?', [carId]);
+            }
+        }
+
+        await db.promise().query('DELETE FROM uzivatel WHERE id = ?', [userId]);
+
+        return res.json({ Status: 'Success' });
+    } catch (error) {
+        console.error('Chyba při mazání uživatele:', error);
+        return res.json({ Error: 'Chyba při mazání uživatele.' });
+    }
+});
+
+app.post('/user/:id/role', async (req, res) => {
+    const userId = req.params.id;
+    const { role } = req.body;
+    const sql = 'UPDATE uzivatel SET role = ? WHERE id = ?';
+    try {
+        await db.promise().query(sql, [role, userId]);
+        return res.json({ Status: 'Success' });
+    } catch (error) {
+        return res.json({ Error: 'Chyba při změně role uživatele.' });
+    }
+});
+
+app.get('/userList', verifyUser, async (req, res) => {
+    const currentUserId = req.id;
+    const sql = 'SELECT uzivatel.id, uzivatel.jmeno, uzivatel.prijmeni, uzivatel.email, uzivatel.telefon, uzivatel.role, uzivatel.datum_registrace FROM uzivatel WHERE uzivatel.id != ?;';
+    try {
+        const [users] = await db.promise().query(sql, [currentUserId]);
+
+        if (users.length === 0) {
+            return;
+        }
+
+        return res.json({ Status: "Success", users });
+    } catch (err) {
+
+    }
+})
+
+app.get('/adList', verifyUser, async (req, res) => {
+
+    const sql = `
+      SELECT 
+        inzerat.id,
+        inzerat.fk_auto, 
+        inzerat.nazev, 
+        inzerat.stav,
+        inzerat.datum_vytvoreni,
+        inzerat.datum_aktualizace, 
+        uzivatel.jmeno, 
+        uzivatel.prijmeni, 
+        uzivatel.email,
+        obrazky.obrazek 
+      FROM inzerat
+      JOIN uzivatel ON inzerat.fk_uzivatel = uzivatel.id
+      JOIN obrazky ON inzerat.id = obrazky.fk_inzerat
+      WHERE obrazky.hlavni = true
+      ;
+    `;
+    try {
+        const [ads] = await db.promise().query(sql);
+
+        if (ads.length === 0) {
+            return res.json({ Status: "Error", Error: "Žádné inzeráty nebyly nalezeny." });
+        }
+
+        return res.json({ Status: "Success", ads });
+    } catch (err) {
+        console.error('Chyba při načítání inzerátů:', err);
+        return res.json({ Status: "Error", Error: "Došlo k chybě při načítání inzerátů." });
+    }
+});
+
+app.post('/add', verifyUser, upload.array('images'), async (req, res) => {
+
+    const userId = req.id;
+    try {
+        const inzerat = JSON.parse(req.body.inzerat);
+        const auto = JSON.parse(req.body.auto);
+        const specifikace = JSON.parse(req.body.specifikace);
+
+        console.log('Nahrané soubory:', req.files);
+        console.log('Inzerát:', inzerat);
+        console.log('Auto:', auto);
+        console.log('Specifikace:', specifikace);
+
+        const [znacka] = await db.promise().query('SELECT id FROM znacka WHERE nazev = ?', [auto.znacka]);
+        let znackaId;
+        if (znacka.length === 0) {
+            const [result] = await db.promise().query('INSERT INTO znacka (nazev) VALUES (?)', [auto.znacka]);
+            znackaId = result.insertId;
+        } else {
+            znackaId = znacka[0].id;
+        }
+        const [model] = await db.promise().query('SELECT id FROM model WHERE nazev = ? AND fk_znacka = ?', [auto.model, znackaId]);
+        let modelId;
+        if (model.length === 0) {
+            const [result] = await db.promise().query('INSERT INTO model (nazev, fk_znacka) VALUES (?, ?)', [auto.model, znackaId]);
+            modelId = result.insertId;
+        } else {
+            modelId = model[0].id;
+        }
+        const [autoResult] = await db.promise().query(
+            `INSERT INTO auto (fk_model, rok_vyroby, vykon_kw, palivo, karoserie, barva, najete_km, objem, pohon, prevodovka, vin, pocet_sedadel, pocet_dveri)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [modelId, specifikace.rokVyroby, specifikace.vykon, specifikace.palivo, auto.karoserie, specifikace.barva, specifikace.najeto, specifikace.objem, specifikace.pohon, specifikace.prevodovka, specifikace.vin, auto.pocetSedadel, auto.pocetDveri]
+        );
+        const autoId = autoResult.insertId;
+
+        const [inzeratSQL] = await db.promise().query(
+            `INSERT INTO inzerat (nazev, cena, popis, fk_auto, fk_uzivatel)
+             VALUES (?, ?, ?, ?, ?)`,
+            [inzerat.nazev, inzerat.cena, inzerat.popis, autoId, userId]
+        );
+        const inzeratId = inzeratSQL.insertId;
+
+        req.inzeratId = inzeratId;
+
+        if (req.files && req.files.length > 0) {
+            const filePaths = req.files.map((file, index) => {
+                return {
+                    filePath: `http://localhost:3001/uploads/${file.filename}`,
+                    hlavni: index === 0
+                };
+            });
+
+            for (const { filePath, hlavni } of filePaths) {
+                await db.promise().query(
+                    'INSERT INTO obrazky (fk_inzerat, obrazek, hlavni) VALUES (?, ?, ?)',
+                    [inzeratId, filePath, hlavni]
+                );
+            }
+        }
+
+        return res.json({ Status: 'Success' });
+    } catch (err) {
+        return res.json({ Error: "Nastala chyba při zpracování registrace." + err });
+    }
+})
 
 //Požadavek na registraci
 app.post('/registrace', async (req, res) => {
@@ -154,8 +349,8 @@ app.get('/favor', verifyUser, async (req, res) => {
 
 //Získaní oblíbených inzerátů (Kvůli zobrazení srdce na samostatném inzerátu)
 app.get('/singleFavourite/:carId', verifyUser, async (req, res) => {
-    const id = req.id; // ID uživatele z middleware verifyUser
-    const { carId } = req.params; // ID inzerátu z URL
+    const id = req.id;
+    const { carId } = req.params;
     const sql = 'SELECT 1 FROM oblibene WHERE fk_uzivatel = ? AND fk_inzerat = ? LIMIT 1';
 
     try {
@@ -236,7 +431,7 @@ app.post('/prihlaseni', async (req, res) => {
             return res.json({ Error: "Hesla se neshodují" });
         }
 
-        req.session.user = { id: user.id }
+        req.session.user = { id: user.id, role: user.role }
 
         return res.json({ Status: 'Success' });
     } catch (err) {
@@ -293,7 +488,7 @@ app.post('/restorePassword/:token', async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, "tajnyKlic");
-        
+
         if (!decoded) {
             return res.json({ Error: "Neplatný nebo vypršený token." });
         }
@@ -478,6 +673,133 @@ app.get('/cars', async (req, res) => {
         const [cars] = await db.promise().query(sql);
 
         return res.json({ Status: "Success", cars });
+    } catch (error) {
+        console.error(error);
+        return res.json({ Error: 'Chyba při načítání inzerátů.' });
+    }
+})
+
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = dirname(__filename);
+
+const uploadsPath = join(__dirname, 'uploads');
+
+console.log(uploadsPath);
+
+app.delete('/ad/:adId/:carId', async (req, res) => {
+    const { adId, carId } = req.params;
+
+    try {
+        await db.promise().query('DELETE FROM oblibene WHERE fk_inzerat = ?', [adId]);
+
+        const images = await db.promise().query('SELECT obrazek FROM obrazky WHERE fk_inzerat = ?', [adId]);
+
+        if (images.length > 0) {
+            images[0].forEach(image => {
+                const imagePath = path.join(__dirname, image.obrazek.replace('http://localhost:3001/', ''));
+                if (imagePath) {
+                    fs.unlinkSync(imagePath)
+                } else {
+                    console.log("Cesta k obrázku je undefined nebo prázdná");
+                }
+            });
+        }
+
+        await db.promise().query('DELETE FROM obrazky WHERE fk_inzerat = ?', [adId]);
+
+        // Odstranění samotného inzerátu
+        await db.promise().query('DELETE FROM inzerat WHERE id = ?', [adId]);
+
+        // Odstranění auta
+        await db.promise().query('DELETE FROM auto WHERE id = ?', [carId]);
+
+        res.json({ Status: 'Success' });
+    } catch (error) {
+        console.error(error);
+        res.json({ Error: 'Chyba při mazání inzerátu.' });
+    }
+});
+
+app.post('/editAdd', async (req, res) => {
+    const data = req.body.editData;
+
+    try {
+        const sql = `
+            UPDATE inzerat
+            SET nazev = ?, cena = ?, popis = ?, stav = ?, datum_aktualizace = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `;
+        const values = [data.car.nazev, data.car.cena, data.car.popis, data.car.stav || 'Aktivní', data.car.id];
+
+        await db.promise().query(sql, values)
+
+        res.json({ Status: "Success" })
+    } catch (error) {
+
+    }
+})
+
+app.get('/myadd', verifyUser, async (req, res) => {
+    const userId = req.id;
+
+    const sql = `
+    SELECT 
+        inzerat.id, 
+        inzerat.nazev, 
+        inzerat.cena,
+        inzerat.popis, 
+        inzerat.stav,
+        inzerat.datum_vytvoreni,
+        inzerat.datum_aktualizace,
+        auto.id AS carId, 
+        auto.najete_km, 
+        auto.rok_vyroby, 
+        auto.vykon_kw, 
+        auto.palivo, 
+        auto.karoserie, 
+        auto.prevodovka,
+        auto.barva,
+        auto.objem,
+        auto.pohon,
+        auto.pocet_sedadel,
+        auto.pocet_dveri,
+        auto.vin,
+        model.nazev AS model,
+        znacka.nazev AS znacka,  
+        uzivatel.kraj,
+        uzivatel.id AS userId, 
+        obrazky.obrazek
+    FROM 
+        inzerat 
+    JOIN 
+        auto ON inzerat.fk_auto = auto.id
+    JOIN
+        model ON auto.fk_model = model.id
+    JOIN 
+        znacka ON model.fk_znacka = znacka.id 
+    JOIN 
+        uzivatel ON inzerat.fk_uzivatel = uzivatel.id 
+    JOIN 
+        obrazky ON inzerat.id = obrazky.fk_inzerat 
+    WHERE 
+        inzerat.fk_uzivatel = ? AND obrazky.hlavni = true
+    GROUP BY 
+        inzerat.id;
+`;
+
+    try {
+        const [cars] = await db.promise().query(sql, [userId]);
+
+        if (cars.length > 0) {
+
+            return res.json({ cars, Status: "Success" });
+        } else {
+            return res.json({ Error: 'Žádné inzeráty nenalezeny.' });
+        }
     } catch (error) {
         console.error(error);
         return res.json({ Error: 'Chyba při načítání inzerátů.' });

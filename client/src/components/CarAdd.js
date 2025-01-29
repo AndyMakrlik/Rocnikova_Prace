@@ -10,15 +10,15 @@ const CarAdd = ({ car, isFavourite: stateFavourite }) => {
   const [isFavourite, setIsFavourite] = useState(stateFavourite);
 
   useEffect(() => {
-    axios.get('http://localhost:3001/profile', { withCredentials: true })
+      axios.get('http://localhost:3001/check', { withCredentials: true })
         .then(res => {
-            if (res.data.Status === "Success") {
-                jePrihlasen(true);
-            } else {
-                jePrihlasen(false);
-            }
+          if (res.data.Status === "Success") {
+            jePrihlasen(true);
+          } else {
+            jePrihlasen(false);
+          }
         })
-})
+    }, []);
 
 const handleHeartClick = async (e) => {
   e.preventDefault();
