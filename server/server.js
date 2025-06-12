@@ -343,16 +343,35 @@ apiRouter.get('/konverzace/:id/uzivatele', verifyUser, async (req, res) => {
     const userId = req.id;
 
     try {
-        const [rows] = await db.query(
+        const [konverzaceRows] = await db.query(
             'SELECT * FROM konverzace WHERE id = ? AND (fk_uzivatel1 = ? OR fk_uzivatel2 = ?)',
             [id, userId, userId]
         );
 
-        if (rows.length === 0) {
+        if (konverzaceRows.length === 0) {
             return res.json({ Status: "Error" });
         }
 
-        res.json({ Status: "Success" });
+        const konverzace = konverzaceRows[0];
+
+        const druhyUzivatelId = konverzace.fk_uzivatel1 === userId ? konverzace.fk_uzivatel2 : konverzace.fk_uzivatel1;
+
+        const [uzivatelRows] = await db.query(
+            'SELECT id, jmeno, prijmeni FROM uzivatel WHERE id = ?',
+            [druhyUzivatelId]
+        );
+
+        if (uzivatelRows.length === 0) {
+            return res.json({ Status: "Error" });
+        }
+
+        const druhy = uzivatelRows[0];
+
+        return res.json({
+            Status: "Success",
+            druhyUzivatelId: druhy.id,
+            jmenoUzivatele: `${druhy.jmeno}`
+        });
     } catch (error) {
         console.error(error);
         res.json({ Status: "Error" });
